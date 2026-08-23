@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#0b66c3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>QR受付システム</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 14px;
+      background: #f3f5f7;
+      color: #202124;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+    .app { width: 100%; max-width: 520px; margin: 0 auto; }
+    .card {
+      background: #fff;
+      padding: 18px;
+      border-radius: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.10);
+    }
+    h1 { margin: 2px 0 5px; text-align: center; font-size: 26px; }
+    .subtitle { margin: 0 0 16px; text-align: center; color: #666; font-size: 13px; }
+    .count {
+      margin-bottom: 16px;
+      padding: 13px;
+      border-radius: 12px;
+      background: #eaf4ff;
+      color: #005f9e;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 800;
+    }
+    label { display: block; margin: 0 0 7px; font-size: 15px; font-weight: 700; }
+    select, input {
+      width: 100%; min-height: 50px; margin-bottom: 14px; padding: 12px;
+      border: 1px solid #c9cdd2; border-radius: 10px; background: #fff;
+      color: #202124; font-size: 16px;
+    }
+    select:focus, input:focus { outline: 3px solid rgba(11,102,195,.15); border-color: #0b66c3; }
+    button {
+      width: 100%; min-height: 52px; margin-bottom: 10px; padding: 13px;
+      border: none; border-radius: 11px; color: #fff; font-size: 18px;
+      font-weight: 800; cursor: pointer; touch-action: manipulation;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    .primary { background: #0b66c3; }
+    .danger { background: #c62828; }
+    .manual { background: #6331a2; }
+    .secondary { background: #687384; }
+    #reader {
+      display: none;
+      width: 100%;
+      min-height: 280px;
+      margin: 4px 0 12px;
+      overflow: hidden;
+      border: 2px solid #0b66c3;
+      border-radius: 13px;
+      background: #111;
+    }
+    #reader video { width: 100% !important; }
+    .status { margin: 7px 0 13px; text-align: center; color: #666; font-size: 14px; }
+    .message {
+      display: none; margin: 12px 0; padding: 15px; border-radius: 11px;
+      text-align: center; font-size: 17px; font-weight: 800; word-break: break-word;
+    }
+    .success { display: block; border: 2px solid #1b7f2a; background: #e3f6e6; color: #11631d; }
+    .already { display: block; border: 2px solid #d66a00; background: #fff3d6; color: #8a4100; }
+    .error { display: block; border: 2px solid #c62828; background: #fde7e9; color: #a40e1b; }
+    .info { display: block; border: 2px solid #0b66c3; background: #eaf4ff; color: #005f9e; }
+    .latest {
+      display: none; margin: 12px 0; padding: 12px; border-radius: 10px;
+      background: #f5f6f7; font-size: 13px; line-height: 1.55; word-break: break-all;
+    }
+    .manual-area { margin-top: 18px; padding-top: 17px; border-top: 1px solid #ddd; }
+    .manual-title { margin-bottom: 12px; font-size: 17px; font-weight: 800; }
+    .note { margin-top: 12px; color: #666; font-size: 12px; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <h1>QR受付システム</h1>
+      <p class="subtitle">QRコードをかざすと自動で受付します</p>
+
+      <div id="count" class="count">受付人数：取得中</div>
+
+      <label for="staff">スタッフ番号</label>
+      <select id="staff">
+        <option value="">選択してください</option>
+        <option value="1">スタッフ1</option>
+        <option value="2">スタッフ2</option>
+        <option value="3">スタッフ3</option>
+        <option value="4">スタッフ4</option>
+        <option value="5">スタッフ5</option>
+        <option value="6">スタッフ6</option>
+        <option value="7">スタッフ7</option>
+        <option value="8">スタッフ8</option>
+        <option value="9">スタッフ9</option>
+        <option value="10">スタッフ10</option>
+      </select>
+
+      <button id="startButton" class="primary" type="button">カメラを開始</button>
+      <button id="stopButton" class="danger" type="button" hidden>カメラを停止</button>
+
+      <div id="cameraStatus" class="status">スタッフ番号を選択してカメラを開始してください</div>
+      <div id="reader"></div>
+      <div id="message" class="message"></div>
+      <div id="latest" class="latest"></div>
+
+      <div class="manual-area">
+        <div class="manual-title">カメラで読めない場合</div>
+        <label for="manualQr">QR文字列を手動入力</label>
+        <input id="manualQr" type="text" placeholder="QRコードの文字列を入力" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="manualButton" class="manual" type="button">手動で受付する</button>
+      </div>
+
+      <button id="reloadButton" class="secondary" type="button">受付人数を更新</button>
+      <p class="note">初回は「カメラを開始」を押した後、ブラウザのカメラ利用を許可してください。同じQRコードは受付済みとして判定されます。</p>
+    </section>
+  </main>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyq6KXridweqjSX-CGQvWmzJngf978qy4E9_laUKPn7qhG6L5DzjSpHBsfpKH_JkwXXYg/exec';
+
+    let scanner = null;
+    let isScanning = false;
+    let isProcessing = false;
+    let lastText = '';
+    let lastTime = 0;
+
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const manualButton = document.getElementById('manualButton');
+    const reloadButton = document.getElementById('reloadButton');
+    const staffSelect = document.getElementById('staff');
+    const manualQr = document.getElementById('manualQr');
+
+    startButton.addEventListener('click', startScanner);
+    stopButton.addEventListener('click', stopScanner);
+    manualButton.addEventListener('click', manualCheckIn);
+    reloadButton.addEventListener('click', loadCount);
+    staffSelect.addEventListener('change', saveStaff);
+    manualQr.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        manualCheckIn();
+      }
+    });
+
+    window.addEventListener('load', function() {
+      restoreStaff();
+      loadCount();
+    });
+
+    function saveStaff() {
+      try { localStorage.setItem('qrReceptionStaff', staffSelect.value); } catch (error) {}
+    }
+
+    function restoreStaff() {
+      try {
+        const staff = localStorage.getItem('qrReceptionStaff');
+        if (staff) staffSelect.value = staff;
+      } catch (error) {}
+    }
+
+    async function startScanner() {
+      if (!staffSelect.value) {
+        showMessage('先にスタッフ番号を選択してください。', 'error');
+        return;
+      }
+      if (typeof Html5Qrcode === 'undefined') {
+        showMessage('QR読み取り機能を読み込めませんでした。通信状態を確認して再読み込みしてください。', 'error');
+        return;
+      }
+      if (isScanning) return;
+
+      saveStaff();
+      clearMessage();
+      document.getElementById('reader').style.display = 'block';
+      document.getElementById('cameraStatus').textContent = 'カメラを起動しています...';
+      startButton.disabled = true;
+
+      try {
+        scanner = scanner || new Html5Qrcode('reader');
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: function(width, height) {
+              const size = Math.floor(Math.min(width, height) * 0.72);
+              return { width: size, height: size };
+            }
+          },
+          onScanSuccess,
+          function() {}
+        );
+
+        isScanning = true;
+        startButton.hidden = true;
+        stopButton.hidden = false;
+        document.getElementById('cameraStatus').textContent = '枠内にQRコードを映してください。';
+      } catch (error) {
+        console.error(error);
+        document.getElementById('reader').style.display = 'none';
+        startButton.disabled = false;
+        showMessage(cameraErrorMessage(error), 'error');
+        document.getElementById('cameraStatus').textContent = 'カメラを起動できませんでした。';
+      }
+    }
+
+    async function stopScanner() {
+      if (scanner && isScanning) {
+        try { await scanner.stop(); } catch (error) { console.error(error); }
+        try { scanner.clear(); } catch (error) {}
+      }
+      isScanning = false;
+      document.getElementById('reader').style.display = 'none';
+      startButton.hidden = false;
+      startButton.disabled = false;
+      stopButton.hidden = true;
+      document.getElementById('cameraStatus').textContent = 'カメラは停止しています。';
+    }
+
+    function onScanSuccess(decodedText) {
+      const text = String(decodedText || '').trim();
+      const now = Date.now();
+      if (!text || isProcessing) return;
+      if (text === lastText && now - lastTime < 5000) return;
+      lastText = text;
+      lastTime = now;
+      submitCheckIn(text);
+    }
+
+    function manualCheckIn() {
+      const text = manualQr.value.trim();
+      if (!text) {
+        showMessage('QR文字列を入力してください。', 'error');
+        manualQr.focus();
+        return;
+      }
+      submitCheckIn(text);
+    }
+
+    async function submitCheckIn(qrValue) {
+      const staff = staffSelect.value;
+      if (!staff) {
+        showMessage('スタッフ番号を選択してください。', 'error');
+        return;
+      }
+      if (isProcessing) return;
+
+      isProcessing = true;
+      setControlsDisabled(true);
+      showMessage('受付処理中です...', 'info');
+
+      const requestId = createRequestId();
+      const body = new URLSearchParams({ requestId, qrValue, staff });
+
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: body.toString()
+        });
+
+        const result = await waitForResult(requestId);
+        handleCheckInResult(result, qrValue, staff);
+      } catch (error) {
+        console.error(error);
+        showMessage('通信に失敗しました。通信状態を確認して、もう一度お試しください。', 'error');
+      } finally {
+        isProcessing = false;
+        setControlsDisabled(false);
+      }
+    }
+
+    async function waitForResult(requestId) {
+      for (let attempt = 0; attempt < 14; attempt++) {
+        await sleep(attempt === 0 ? 500 : 600);
+        const result = await jsonp('result', { requestId });
+        if (result && result.type !== 'PENDING') return result;
+      }
+      throw new Error('受付結果の取得がタイムアウトしました。');
+    }
+
+    function loadCount() {
+      jsonp('count', {})
+        .then(function(result) {
+          if (!result || !result.success) throw new Error('人数取得失敗');
+          document.getElementById('count').textContent = '受付人数：' + Number(result.count || 0) + '人';
+        })
+        .catch(function(error) {
+          console.error(error);
+          document.getElementById('count').textContent = '受付人数：取得失敗';
+        });
+    }
+
+    function jsonp(action, params) {
+      return new Promise(function(resolve, reject) {
+        const callbackName = 'qrCallback_' + createRequestId();
+        const script = document.createElement('script');
+        const query = new URLSearchParams(Object.assign({}, params, {
+          action,
+          callback: callbackName,
+          cacheBust: String(Date.now())
+        }));
+
+        const timer = setTimeout(function() {
+          cleanup();
+          reject(new Error('API応答がありません。'));
+        }, 10000);
+
+        function cleanup() {
+          clearTimeout(timer);
+          try { delete window[callbackName]; } catch (error) { window[callbackName] = undefined; }
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = function(data) {
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = function() {
+          cleanup();
+          reject(new Error('APIを読み込めませんでした。'));
+        };
+
+        script.src = GAS_URL + '?' + query.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    function handleCheckInResult(result, qrValue, staff) {
+      if (result && result.success) {
+        showMessage(result.message || '受付完了しました。', 'success');
+        manualQr.value = '';
+        showLatest(qrValue, result.checkinTime, staff);
+        if (typeof result.count === 'number') {
+          document.getElementById('count').textContent = '受付人数：' + result.count + '人';
+        } else {
+          loadCount();
+        }
+      } else if (result && result.type === 'ALREADY_USED') {
+        showMessage(result.message || 'このQRは受付済みです。', 'already');
+      } else {
+        showMessage((result && result.message) || '受付できませんでした。', 'error');
+      }
+    }
+
+    function createRequestId() {
+      if (window.crypto && crypto.getRandomValues) {
+        const values = new Uint32Array(4);
+        crypto.getRandomValues(values);
+        return Array.from(values).map(function(value) { return value.toString(36); }).join('_');
+      }
+      return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 14);
+    }
+
+    function sleep(milliseconds) {
+      return new Promise(function(resolve) { setTimeout(resolve, milliseconds); });
+    }
+
+    function setControlsDisabled(disabled) {
+      manualButton.disabled = disabled;
+      manualQr.disabled = disabled;
+      staffSelect.disabled = disabled;
+    }
+
+    function showMessage(text, type) {
+      const element = document.getElementById('message');
+      element.textContent = text;
+      element.className = 'message ' + type;
+    }
+
+    function clearMessage() {
+      const element = document.getElementById('message');
+      element.textContent = '';
+      element.className = 'message';
+    }
+
+    function showLatest(qrValue, time, staff) {
+      const element = document.getElementById('latest');
+      element.style.display = 'block';
+      element.textContent = '最新受付：' + time + ' ／ スタッフ' + staff + ' ／ QR：' + qrValue;
+    }
+
+    function cameraErrorMessage(error) {
+      const text = String(error || '').toLowerCase();
+      if (text.includes('permission') || text.includes('notallowed') || text.includes('denied')) {
+        return 'カメラが許可されていません。Safariのサイト設定でカメラを許可してください。';
+      }
+      if (text.includes('notfound')) return '利用できるカメラが見つかりません。';
+      if (text.includes('notreadable')) return 'カメラを使用できません。他のアプリを閉じて再度お試しください。';
+      return 'カメラ起動エラー：' + String(error || '詳細不明');
+    }
+  </script>
+</body>
+</html>
