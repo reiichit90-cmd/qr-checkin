@@ -1,13 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QR受付システム</title>
 </head>
+
 <body>
 
 <h1>QR受付システム</h1>
 
-<p>GitHub Pages動作確認OK</p>
+<p>GitHub Pages 本番版準備中</p>
+
+<p id="gas">
+接続確認中...
+</p>
+
+<script>
+
+const GAS_URL =
+'https://script.google.com/macros/s/AKfycbyq6KXridweqjSX-CGQvWmzJngf978qy4E9_laUKPn7qhG6L5DzjSpHBsfpKH_JkwXXYg/exec';
+
+document.getElementById("gas").innerHTML =
+"GAS接続先：" + GAS_URL;
+
+</script>
 
 </body>
 </html>
