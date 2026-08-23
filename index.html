@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QR受付システム</title>
 </head>
 
@@ -10,19 +10,43 @@
 
 <h1>QR受付システム</h1>
 
-<p>GitHub Pages 本番版準備中</p>
+<button onclick="checkApi()">
+API接続確認
+</button>
 
-<p id="gas">
-接続確認中...
-</p>
+<div id="result"></div>
 
 <script>
 
 const GAS_URL =
 'https://script.google.com/macros/s/AKfycbyq6KXridweqjSX-CGQvWmzJngf978qy4E9_laUKPn7qhG6L5DzjSpHBsfpKH_JkwXXYg/exec';
 
-document.getElementById("gas").innerHTML =
-"GAS接続先：" + GAS_URL;
+function checkApi(){
+
+  const callbackName =
+    'cb_' + Date.now();
+
+  window[callbackName] =
+    function(data){
+
+      document.getElementById('result')
+        .innerHTML =
+        JSON.stringify(data);
+
+    };
+
+  const script =
+    document.createElement('script');
+
+  script.src =
+    GAS_URL +
+    '?action=health' +
+    '&callback=' +
+    callbackName;
+
+  document.body.appendChild(script);
+
+}
 
 </script>
 
